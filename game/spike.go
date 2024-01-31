@@ -1,8 +1,6 @@
 package game
 
 import (
-	"fmt"
-
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -31,15 +29,13 @@ func (s *Spike) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	if s.Top {
 		if *s.Y > 0 {
-			fmt.Println("s.Y: ", *s.Y, " s.Sprite.Bounds().Dy(): ", s.Sprite.Bounds().Dy())
-
-			// scale proportionally so the spike bottom is at the same place but the top is at the top of the screen
+			// NEEDS TO BE REDONE TO SCALE PROPERLY
 			op.GeoM.Scale(1, float64(*s.Y)/float64(s.Sprite.Bounds().Dy())*0.2)
 			*s.Y = -10
 		}
 	} else {
 		if *s.Y < 2160 {
-			// scale proportionally so the spike top is at the same place but the bottom is at the bottom of the screen
+			// NEEDS TO BE REDONE TO SCALE PROPERLY
 			op.GeoM.Scale(1, float64(2160)/float64(s.Sprite.Bounds().Dy())+0.2)
 		}
 	}

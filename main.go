@@ -7,6 +7,8 @@ import (
 )
 
 func main() {
+	// TODO: add a menu
+	// TODO: add a pause menu
 	g := game.Initialize()
 	ebiten.SetWindowSize(g.Engine.Background.Width/4, g.Engine.Background.Height/4)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
