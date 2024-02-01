@@ -20,7 +20,7 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
-//go:embed assets/*.png assets/*.ttf
+//go:embed assets/*.png assets/*.ttf assets/*.mp3
 var assets embed.FS
 
 type Engine struct {
@@ -38,6 +38,7 @@ type Engine struct {
 	DeathFontColor    color.Color
 	DeathScreen       bool
 	SpikeDistance     float64
+	MusicPlayer       *MusicPlayer
 }
 
 func NewEngine(w, h int) *Engine {
@@ -56,6 +57,7 @@ func NewEngine(w, h int) *Engine {
 		DeathFontColor:    color.RGBA{255, 0, 0, 255},
 		DeathScreen:       false,
 		SpikeDistance:     1800,
+		MusicPlayer:       NewMusicPlayer("assets/8bithovben.mp3"),
 	}
 }
 
@@ -109,6 +111,9 @@ func (e *Engine) Update() {
 	e.Player.Update(e.Input.Update())
 
 	if e.DeathScreen {
+		if e.MusicPlayer.Sound.IsPlaying() {
+			e.MusicPlayer.Sound.Pause()
+		}
 		if e.Input.InputData.Jump {
 			e.DeathScreen = false
 			e.Score = 0
@@ -117,8 +122,12 @@ func (e *Engine) Update() {
 			e.Background.X = 0
 			*e.Spikes = []Spike{}
 			e.SpikeDistance = 1800
+			e.MusicPlayer.Sound.Rewind()
 		}
 		return
+	}
+	if !e.MusicPlayer.Sound.IsPlaying() {
+		e.MusicPlayer.Sound.Play()
 	}
 
 	// check for collisions

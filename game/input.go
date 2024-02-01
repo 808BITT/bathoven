@@ -10,12 +10,14 @@ type InputManager struct {
 }
 
 type InputData struct {
-	Jump bool
+	Jump        bool
+	CycleOutfit bool
 }
 
 func NewInputData() *InputData {
 	return &InputData{
-		Jump: false,
+		Jump:        false,
+		CycleOutfit: false,
 	}
 }
 
@@ -23,11 +25,16 @@ func (i *InputData) SetJump() {
 	i.Jump = true
 }
 
+func (i *InputData) SetCycleOutfit() {
+	i.CycleOutfit = true
+}
+
 func (i *InputData) Reset() {
 	if i == nil {
 		return
 	}
 	i.Jump = false
+	i.CycleOutfit = false
 }
 
 func NewInputManager() *InputManager {
@@ -42,12 +49,18 @@ func (i *InputManager) Update() *InputData {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		i.InputData.SetJump()
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyO) {
+		i.InputData.SetCycleOutfit()
 	} else {
 		i.InputData.Reset()
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		ebiten.SetFullscreen(!ebiten.IsFullscreen())
+		ebiten.SetFullscreen(true)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) && ebiten.IsFullscreen() {
+		ebiten.SetFullscreen(false)
 	}
 	return i.InputData
 }

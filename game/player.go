@@ -9,6 +9,13 @@ type Player struct {
 	Y      int
 	dy     float64
 	Sprite *ebiten.Image
+	Outfit int
+}
+
+var outfits = []string{
+	"assets/batty_van_beetoven.png",
+	"assets/batty_van_cowboy.png",
+	"assets/batty_van_hoven.png",
 }
 
 func NewPlayer(x, y int, img *ebiten.Image) *Player {
@@ -17,10 +24,16 @@ func NewPlayer(x, y int, img *ebiten.Image) *Player {
 		Y:      y,
 		dy:     -50,
 		Sprite: img,
+		Outfit: 0,
 	}
 }
 
 func (p *Player) Update(input *InputData) {
+	if input.CycleOutfit {
+		p.Outfit = (p.Outfit + 1) % 3
+		p.Sprite = LoadImage(outfits[p.Outfit])
+	}
+
 	if input.Jump && p.Y > 0 {
 		p.dy = -20
 	}
@@ -54,4 +67,8 @@ func (p *Player) Bounds() (int, int) {
 
 func (p *Player) Position() (int, int) {
 	return p.X, p.Y
+}
+
+func (p *Player) SetSprite(path string) {
+	p.Sprite = LoadImage(path)
 }
