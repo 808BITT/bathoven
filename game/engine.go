@@ -44,7 +44,7 @@ type Engine struct {
 func NewEngine(w, h int) *Engine {
 	return &Engine{
 		Background:        NewViewport(w, h, LoadImage("assets/bg3.png")),
-		Player:            NewPlayer(300, 1000, LoadImage("assets/batty_van_hoven.png")),
+		Player:            NewPlayer(300, 1000, LoadImage(outfits[0])),
 		Spikes:            &[]Spike{},
 		Input:             &InputManager{},
 		Score:             0,
