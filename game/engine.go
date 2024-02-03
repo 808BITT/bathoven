@@ -181,7 +181,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 	vector.DrawFilledRect(screen, float32(0), float32(0), float32(3840), float32(150), color.RGBA{0, 0, 0, 100}, true)
 	text.Draw(screen, fmt.Sprintf("Score: %d", e.Score), e.Fonts.Normal, 100, 120, e.Fonts.White)
-	text.Draw(screen, fmt.Sprintf("High Score: %d", e.HighScore), e.Fonts.Normal, 2600, 100, e.Fonts.White)
+	text.Draw(screen, fmt.Sprintf("High Score: %d", e.HighScore), e.Fonts.Normal, 2500, 120, e.Fonts.White)
 
 	if e.Paused {
 		vector.DrawFilledRect(screen, float32(0), float32(0), float32(3840), float32(2160), color.RGBA{0, 0, 0, 150}, true)
