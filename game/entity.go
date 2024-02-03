@@ -20,7 +20,7 @@ func NewEntityManager() *EntityManager {
 		Spikes:        &[]Spike{},
 		SpikeDistance: 1800,
 		SpikeGap:      300,
-		SpikeSpeed:    10,
+		SpikeSpeed:    15,
 	}
 }
 
@@ -61,9 +61,9 @@ func (e *EntityManager) Update(input *InputData) int {
 			panic(err)
 		}
 		random = int(b[0]) - 64
-		random *= 3
-		*e.Spikes = append(*e.Spikes, *NewSpike(e.SpikeSpeed, 3840+random, -500-e.SpikeGap+(difficulty*4)+random, LoadImage("assets/tall_mite2.png"), true))
-		*e.Spikes = append(*e.Spikes, *NewSpike(e.SpikeSpeed, 3840+random, 1000+e.SpikeGap-(difficulty*4)+random, LoadImage("assets/tall_mite1.png"), false))
+		random *= 2
+		*e.Spikes = append(*e.Spikes, *NewSpike(e.SpikeSpeed, 3840+random*2, -500-e.SpikeGap+(difficulty*4)+random, LoadImage("assets/tall_mite2.png"), true))
+		*e.Spikes = append(*e.Spikes, *NewSpike(e.SpikeSpeed, 3840+random*2, 1000+e.SpikeGap-(difficulty*4)+random, LoadImage("assets/tall_mite1.png"), false))
 
 		if e.SpikeDistance >= 900 {
 			e.SpikeDistance -= 100
