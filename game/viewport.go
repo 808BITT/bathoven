@@ -2,28 +2,23 @@ package game
 
 import "github.com/hajimehoshi/ebiten/v2"
 
-type Viewport struct {
+type ScrollingBackground struct {
 	Width  int
 	Height int
 	X      int
 	Image  *ebiten.Image
 }
 
-func NewViewport(width, height int, bgImg *ebiten.Image) *Viewport {
-	return &Viewport{
+func NewViewport(width, height int) *ScrollingBackground {
+	return &ScrollingBackground{
 		Width:  width,
 		Height: height,
 		X:      0,
-		Image:  bgImg,
+		Image:  LoadImage("assets/bg3.png"),
 	}
 }
 
-func (v *Viewport) Update() {
-	// adjust width and height to match the screen
-	v.Width, v.Height = ebiten.WindowSize()
-}
-
-func (v *Viewport) Move() {
+func (v *ScrollingBackground) Update() {
 	s := v.Image.Bounds().Size()
 	maxX := s.X * 16
 
@@ -31,11 +26,11 @@ func (v *Viewport) Move() {
 	v.X %= maxX
 }
 
-func (p *Viewport) Position() int {
+func (p *ScrollingBackground) Position() int {
 	return p.X
 }
 
-func (v *Viewport) Draw(screen *ebiten.Image) {
+func (v *ScrollingBackground) Draw(screen *ebiten.Image) {
 	x := v.Position()
 	bgScrollOffset := float64(-x) / 8
 

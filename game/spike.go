@@ -4,12 +4,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-func NewSpike(x, y int, img *ebiten.Image, top bool) *Spike {
+func NewSpike(speed float64, x, y int, img *ebiten.Image, top bool) *Spike {
 	return &Spike{
 		X:      &x,
 		Y:      &y,
 		Sprite: img,
 		Top:    top,
+		Speed:  speed,
 	}
 }
 
@@ -18,28 +19,15 @@ type Spike struct {
 	Y      *int
 	Sprite *ebiten.Image
 	Top    bool
+	Speed  float64
 }
 
 func (s *Spike) Update() {
-	// move the spike to the left
-	*s.X -= 30
+	*s.X -= int(s.Speed)
 }
 
 func (s *Spike) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
-	if s.Top {
-		if *s.Y > 0 {
-			// NEEDS TO BE REDONE TO SCALE PROPERLY
-			op.GeoM.Scale(1, float64(*s.Y)/float64(s.Sprite.Bounds().Dy())*0.2)
-			*s.Y = -10
-		}
-	} else {
-		if *s.Y < 2160 {
-			// NEEDS TO BE REDONE TO SCALE PROPERLY
-			op.GeoM.Scale(1, float64(2160)/float64(s.Sprite.Bounds().Dy())+0.2)
-		}
-	}
-	op.GeoM.Scale(2, 1)
 	op.GeoM.Translate(float64(*s.X), float64(*s.Y))
 	screen.DrawImage(s.Sprite, op)
 }
@@ -59,9 +47,13 @@ func (s *Spike) CollidesWith(p *Player) bool {
 	sx, sy := s.Position()
 	sw, sh := s.Bounds()
 
-	// adjust the spike hitbox to be centered on the sprite
-	sx += sw / 2
-	sw /= 2
+	sx += sw / 4
+	sw /= 4
+
+	px += (pw / 10) * 2
+	pw -= (pw / 10) * 4
+	py += (ph / 10) * 2
+	ph -= (ph / 10) * 4
 
 	if px < sx+sw && px+pw > sx && py < sy+sh && py+ph > sy {
 		return true
