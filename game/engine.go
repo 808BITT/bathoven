@@ -14,50 +14,50 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
 )
 
 //go:embed assets/*.png assets/*.ttf assets/*.mp3
 var assets embed.FS
 
+const DeathScreenTime = 60
+
 type Engine struct {
-	Background        *Viewport
-	Player            *Player
-	Spikes            *[]Spike
-	Input             *InputManager
-	Score             int
-	HighScore         int
-	Font              font.Face
-	ScoreFontColor    color.Color
-	CongratsFontColor color.Color
-	CurrentCongrats   string
-	DeathFont         font.Face
-	DeathFontColor    color.Color
-	DeathScreen       bool
-	SpikeDistance     float64
-	MusicPlayer       *MusicPlayer
+	Background      *ScrollingBackground
+	MusicPlayer     *MusicPlayer
+	DeathSound      *SoundEffect
+	Entities        *EntityManager
+	Input           *InputData
+	Fonts           *FontManager
+	Score           int
+	ScoreTimer      int
+	HighScore       int
+	CurrentCongrats string
+	Paused          bool
+	DeathScreen     bool
+	DeathTimer      int
+	SpikeDistance   float64
 }
 
 func NewEngine(w, h int) *Engine {
+	context := audio.NewContext(44100)
 	return &Engine{
-		Background:        NewViewport(w, h, LoadImage("assets/bg3.png")),
-		Player:            NewPlayer(300, 1000, LoadImage(outfits[0])),
-		Spikes:            &[]Spike{},
-		Input:             &InputManager{},
-		Score:             0,
-		HighScore:         LoadHighScore(),
-		Font:              LoadFont("assets/SuperLegendBoy.ttf", 100),
-		ScoreFontColor:    color.RGBA{255, 255, 255, 255},
-		CongratsFontColor: color.RGBA{34, 139, 34, 255},
-		CurrentCongrats:   "Nice!",
-		DeathFont:         LoadFont("assets/SuperLegendBoy.ttf", 200),
-		DeathFontColor:    color.RGBA{255, 0, 0, 255},
-		DeathScreen:       false,
-		SpikeDistance:     1800,
-		MusicPlayer:       NewMusicPlayer("assets/8bithovben.mp3"),
+		Background:      NewViewport(w, h),
+		MusicPlayer:     NewMusicPlayer(context),
+		DeathSound:      NewSoundEffect(context),
+		Entities:        NewEntityManager(),
+		Input:           NewInputData(),
+		Fonts:           NewFontManager(),
+		CurrentCongrats: RandomGratz(),
+		Paused:          false,
+		DeathScreen:     false,
+		DeathTimer:      0,
+		SpikeDistance:   1800,
+		Score:           0,
+		ScoreTimer:      0,
+		HighScore:       LoadHighScore(),
 	}
 }
 
@@ -85,130 +85,129 @@ func LoadHighScore() int {
 	return highScore
 }
 
-func LoadFont(fontPath string, fontSize int) font.Face {
-	fontBytes, err := assets.ReadFile(fontPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ttfFont, err := opentype.Parse(fontBytes)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fontFace, _ := opentype.NewFace(ttfFont, &opentype.FaceOptions{
-		Size:    float64(fontSize),
-		DPI:     72,
-		Hinting: font.HintingFull,
-	})
-	return fontFace
-}
+func (e *Engine) Update() error {
 
-func (e *Engine) Update() {
-	e.SpikeDistance -= 0.1
-	if e.SpikeDistance < 400 {
-		e.SpikeDistance = 400
+	input := e.Input.Update()
+
+	if input.CycleOutfit {
+		e.Entities.Player.CycleOutfit()
 	}
 
-	e.Player.Update(e.Input.Update())
+	if e.Input.ActivateFullscreen {
+		if !ebiten.IsFullscreen() {
+			ebiten.SetFullscreen(true)
+		}
+	}
+
+	if e.Input.ExitFullscreen {
+		if ebiten.IsFullscreen() {
+			ebiten.SetFullscreen(false)
+		}
+	}
 
 	if e.DeathScreen {
 		if e.MusicPlayer.Sound.IsPlaying() {
+			e.DeathTimer = 0
 			e.MusicPlayer.Sound.Pause()
+			e.DeathSound.Sound.Play()
 		}
-		if e.Input.InputData.Jump {
+		if e.Input.Jump && e.DeathTimer > DeathScreenTime {
+			// TODO: replace this with a restart function.. (probably in the engine struct)
 			e.DeathScreen = false
+			e.DeathTimer = 0
 			e.Score = 0
-			e.Player.Y = 1000
-			e.Player.dy = -50
+			e.ScoreTimer = 0
+			e.Entities.Player.Y = 1000
+			e.Entities.Player.dy = -50
 			e.Background.X = 0
-			*e.Spikes = []Spike{}
+			*e.Entities = *NewEntityManager()
 			e.SpikeDistance = 1800
+			e.DeathSound.Sound.Rewind()
 			e.MusicPlayer.Sound.Rewind()
 		}
-		return
+		e.DeathTimer++
+		return nil
 	}
+
 	if !e.MusicPlayer.Sound.IsPlaying() {
 		e.MusicPlayer.Sound.Play()
 	}
 
-	// check for collisions
-	for _, spike := range *e.Spikes {
-		if spike.CollidesWith(e.Player) {
-			if e.Score > e.HighScore {
-				e.HighScore = e.Score
-				e.SaveHighScore()
-			}
-			e.DeathScreen = true
+	if input.Pause {
+		e.Paused = !e.Paused
+	}
+
+	if e.Paused {
+		e.MusicPlayer.Sound.Pause()
+		if e.Input.Jump {
+			e.Paused = false
+			e.MusicPlayer.Sound.Play()
+		}
+		return nil
+	}
+
+	e.Background.Update()
+	e.Entities.Update(input)
+
+	if e.Entities.Collide() {
+		e.DeathScreen = true
+		if e.Score > e.HighScore {
+			e.HighScore = e.Score
+			e.SaveHighScore()
 		}
 	}
 
-	e.Background.Move()
-	for i, spike := range *e.Spikes {
-		spike.Update()
-		if *spike.X < -400 {
-			if spike.Top {
-				e.Score++
-			}
-			*e.Spikes = append((*e.Spikes)[:i], (*e.Spikes)[i+1:]...)
-			break
-		}
+	if !e.DeathScreen {
+		e.ScoreTimer += 1
+		e.Score = e.ScoreTimer / 60
 	}
 
-	// add spikes if needed
-	if len(*e.Spikes) < 40 {
-		//make sure the spikes are not too close to each other
-		for _, spike := range *e.Spikes {
-			if *spike.X > 3840-int(e.SpikeDistance) {
-				return
-			}
-		}
-		offset, err := rand.Int(rand.Reader, big.NewInt(900))
-		if err != nil {
-			log.Fatal(err)
-		}
-		offsetInt := int(offset.Int64() - 450 - int64(2000/e.SpikeDistance))
-		*e.Spikes = append(*e.Spikes, *NewSpike(3840, 500-offsetInt, LoadImage("assets/tall_mite2.png"), true))
-		*e.Spikes = append(*e.Spikes, *NewSpike(3840, 1410-offsetInt, LoadImage("assets/tall_mite1.png"), false))
-	}
-
+	return nil
 }
 
 func (e *Engine) Draw(screen *ebiten.Image) {
 	e.Background.Draw(screen)
-	e.Player.Draw(screen)
-	for _, spike := range *e.Spikes {
-		spike.Draw(screen)
-	}
-
-	// paint slightly transparent black over the score area to make it easier to read
-	vector.DrawFilledRect(screen, float32(0), float32(0), float32(3840), float32(150), color.RGBA{0, 0, 0, 100}, true)
+	e.Entities.Draw(screen)
 
 	if e.DeathScreen {
-		// paint slightly transparent black over the score area to make it easier to read
 		vector.DrawFilledRect(screen, float32(0), float32(0), float32(3840), float32(2160), color.RGBA{0, 0, 0, 150}, true)
-		text.Draw(screen, "You Died!", e.DeathFont, 1250, 980, e.DeathFontColor)
-		text.Draw(screen, fmt.Sprintf("High Score: %d", e.HighScore), e.Font, 1300, 1200, e.ScoreFontColor)
-		text.Draw(screen, "Press Space to Restart", e.Font, 1100, 1400, e.ScoreFontColor)
+		text.Draw(screen, "You Died!", e.Fonts.Big, 1250, 980, e.Fonts.Red)
+		text.Draw(screen, fmt.Sprintf("High Score: %d", e.HighScore), e.Fonts.Normal, 1300, 1200, e.Fonts.White)
+		if e.DeathTimer > DeathScreenTime {
+			text.Draw(screen, "Press Space to Restart", e.Fonts.Normal, 1100, 1400, e.Fonts.White)
+		}
 		return
 	}
 
-	// text.Draw(screen, fmt.Sprintf("High Score: %d", e.HighScore), e.ScoreFont, 2600, 100, e.ScoreFontColor)
-	text.Draw(screen, fmt.Sprintf("Score: %d", e.Score), e.Font, 100, 120, e.ScoreFontColor)
+	vector.DrawFilledRect(screen, float32(0), float32(0), float32(3840), float32(150), color.RGBA{0, 0, 0, 100}, true)
+	text.Draw(screen, fmt.Sprintf("Score: %d", e.Score), e.Fonts.Normal, 100, 120, e.Fonts.White)
+	text.Draw(screen, fmt.Sprintf("High Score: %d", e.HighScore), e.Fonts.Normal, 2600, 100, e.Fonts.White)
+
+	if e.Paused {
+		vector.DrawFilledRect(screen, float32(0), float32(0), float32(3840), float32(2160), color.RGBA{0, 0, 0, 150}, true)
+		text.Draw(screen, "Paused", e.Fonts.Big, 1400, 960, e.Fonts.White)
+		return
+	}
 
 	if e.Score > e.HighScore {
-		text.Draw(screen, "New High Score!", e.Font, 1300, 120, e.CongratsFontColor)
+		text.Draw(screen, "New High Score!", e.Fonts.Normal, 1300, 120, e.Fonts.Green)
 	}
 
 	if e.Score > 0 && e.Score%10 == 0 {
-		text.Draw(screen, e.CurrentCongrats, e.DeathFont, 1920-len(e.CurrentCongrats)*80, 600, e.CongratsFontColor)
+		text.Draw(screen, e.CurrentCongrats, e.Fonts.Big, 1920-len(e.CurrentCongrats)*80, 600, e.Fonts.Green)
 		go func() {
-			time.Sleep(1 * time.Second)
+			time.Sleep(3 * time.Second)
 			e.CurrentCongrats = RandomGratz()
 		}()
 	}
 
 	if e.Score == 0 {
-		text.Draw(screen, "Press Space to Jump", e.Font, 1100, 1100, e.ScoreFontColor)
+		text.Draw(screen, "Press Space to Jump", e.Fonts.Normal, 1200, 1100, e.Fonts.White)
 	}
+}
+
+func (e *Engine) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return 3840, 2160
 }
 
 func RandomGratz() string {

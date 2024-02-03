@@ -72,3 +72,8 @@ func (p *Player) Position() (int, int) {
 func (p *Player) SetSprite(path string) {
 	p.Sprite = LoadImage(path)
 }
+
+func (p *Player) CycleOutfit() {
+	p.Outfit = (p.Outfit + 1) % 3
+	p.SetSprite(outfits[p.Outfit])
+}

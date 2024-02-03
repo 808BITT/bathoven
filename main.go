@@ -9,12 +9,12 @@ import (
 func main() {
 	// TODO: add a menu
 	// TODO: add a pause menu
-	g := game.Initialize()
-	ebiten.SetWindowSize(g.Engine.Background.Width/4, g.Engine.Background.Height/4)
+	e := game.NewEngine(3840, 2160)
+	ebiten.SetWindowSize(e.Background.Width/2, e.Background.Height/2)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowTitle("Bathoven")
 	// ebiten.SetFullscreen(true)
-	err := ebiten.RunGame(&g)
+	err := ebiten.RunGame(e)
 	if err != nil {
 		panic(err)
 	}

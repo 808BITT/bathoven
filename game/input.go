@@ -5,20 +5,44 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-type InputManager struct {
-	InputData *InputData
-}
-
 type InputData struct {
-	Jump        bool
-	CycleOutfit bool
+	Jump               bool
+	CycleOutfit        bool
+	Pause              bool
+	ActivateFullscreen bool
+	ExitFullscreen     bool
 }
 
 func NewInputData() *InputData {
 	return &InputData{
-		Jump:        false,
-		CycleOutfit: false,
+		Jump:               false,
+		CycleOutfit:        false,
+		Pause:              false,
+		ActivateFullscreen: false,
+		ExitFullscreen:     false,
 	}
+}
+
+func (i *InputData) Update() *InputData {
+	i.Reset()
+
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		i.SetJump()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyO) {
+		i.SetCycleOutfit()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		i.SetPause()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		i.SetActivateFullscreen()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		i.SetExitFullscreen()
+	}
+
+	return i
 }
 
 func (i *InputData) SetJump() {
@@ -29,38 +53,25 @@ func (i *InputData) SetCycleOutfit() {
 	i.CycleOutfit = true
 }
 
+func (i *InputData) SetPause() {
+	i.Pause = true
+}
+
+func (i *InputData) SetActivateFullscreen() {
+	i.ActivateFullscreen = true
+}
+
+func (i *InputData) SetExitFullscreen() {
+	i.ExitFullscreen = true
+}
+
 func (i *InputData) Reset() {
 	if i == nil {
 		return
 	}
 	i.Jump = false
 	i.CycleOutfit = false
-}
-
-func NewInputManager() *InputManager {
-	return &InputManager{
-		InputData: NewInputData(),
-	}
-}
-
-func (i *InputManager) Update() *InputData {
-	if i.InputData == nil {
-		i.InputData = NewInputData()
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		i.InputData.SetJump()
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyO) {
-		i.InputData.SetCycleOutfit()
-	} else {
-		i.InputData.Reset()
-	}
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		ebiten.SetFullscreen(true)
-	}
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) && ebiten.IsFullscreen() {
-		ebiten.SetFullscreen(false)
-	}
-	return i.InputData
+	i.Pause = false
+	i.ActivateFullscreen = false
+	i.ExitFullscreen = false
 }
